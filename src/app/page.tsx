@@ -253,6 +253,17 @@ export default function Home() {
   const handleGoogleLogin = async () => {
     if (!auth || !db) {
       showNotification('Authentication system not ready. Please refresh the page and try again.', 'error');
+      console.error('Auth or DB not initialized:', { auth: !!auth, db: !!db });
+      return;
+    }
+    
+    // Check if we have the required config
+    if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || !process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) {
+      showNotification('Firebase configuration missing. Please check environment variables.', 'error');
+      console.error('Missing Firebase config:', {
+        apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      });
       return;
     }
     
@@ -1161,6 +1172,15 @@ export default function Home() {
       <h1 className="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-6">
         Welcome
       </h1>
+      {/* Debug Info */}
+      {typeof window !== 'undefined' && (
+        <div className="mb-4 p-2 bg-red-100 border border-red-300 rounded text-xs text-red-700">
+          <strong>Debug:</strong> {window.location.hostname}<br/>
+          <strong>Auth Domain:</strong> {process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'Missing'}<br/>
+          <strong>API Key:</strong> {process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? 'Set' : 'Missing'}<br/>
+          <strong>Connection:</strong> {connectionStatus}
+        </div>
+      )}
       <div className="space-y-4">
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
           Sign in to access your AI assistant
