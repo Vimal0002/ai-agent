@@ -59,6 +59,7 @@ export default function Home() {
   const [notification, setNotification] = useState<{text: string, type: 'success'|'error'|'info'} | null>(null);
   const [showConsentScreen, setShowConsentScreen] = useState(false);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'chat'>('dashboard');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -776,6 +777,214 @@ export default function Home() {
     );
   };
 
+  const renderSimpleChat = () => (
+    <div className={`w-full max-w-4xl mx-auto ${darkMode ? 'dark' : ''}`}>
+      {/* Simple Chat Header */}
+      <div className="bg-white/10 backdrop-blur-sm rounded-t-2xl p-4 border-b border-white/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              title="Back to Dashboard"
+            >
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12,2A2,2 0 0,0 10,4C10,5.38 10.83,6.57 12,7.17C13.17,6.57 14,5.38 14,4A2,2 0 0,0 12,2M21,9V7L15,1H5C3.89,1 3,1.89 3,3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V9M12,15C10.89,15 10,14.1 10,13S10.89,11 12,11A2,2 0 0,1 14,13C14,14.1 13.1,15 12,15Z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">AI Assistant</h3>
+                <div className="flex items-center space-x-1 text-sm text-green-400">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span>Connected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-white/60 text-sm">{messages.length} messages</span>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              title="Toggle theme"
+            >
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                {darkMode ? (
+                  <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"/>
+                ) : (
+                  <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+                )}
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Simple Messages Area */}
+      <div className="h-[500px] overflow-y-auto bg-white/5 backdrop-blur-sm">
+        <div className="p-6 space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white/60" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4C22,2.89 21.1,2 20,2Z" />
+                </svg>
+              </div>
+              <p className="text-white/60 mb-2">Start a conversation</p>
+              <p className="text-white/40 text-sm">Type a message or use voice input to begin</p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[70%] ${
+                  message.from === 'user' ? 'order-2' : 'order-1'
+                }`}>
+                  <div className={`p-4 rounded-2xl ${
+                    message.from === 'user'
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
+                      : 'bg-white/10 backdrop-blur-sm text-white border border-white/10 rounded-bl-md'
+                  }`}>
+                    <p className="leading-relaxed">{message.text}</p>
+                  </div>
+                  <div className={`text-xs text-white/40 mt-1 ${
+                    message.from === 'user' ? 'text-right' : 'text-left'
+                  }`}>
+                    {formatTimestamp(message.timestamp)}
+                  </div>
+                </div>
+                
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  message.from === 'user' 
+                    ? 'order-1 mr-3 bg-gradient-to-br from-green-400 to-blue-500' 
+                    : 'order-2 ml-3 bg-gradient-to-br from-purple-500 to-pink-500'
+                }`}>
+                  {message.from === 'user' ? (
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12,2A2,2 0 0,0 10,4C10,5.38 10.83,6.57 12,7.17C13.17,6.57 14,5.38 14,4A2,2 0 0,0 12,2Z" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12,2A2,2 0 0,0 10,4C10,5.38 10.83,6.57 12,7.17C13.17,6.57 14,5.38 14,4A2,2 0 0,0 12,2Z" />
+                  </svg>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                    <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                    <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Simple Input Area */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-b-2xl border-t border-white/10 p-4">
+        <div className="flex items-center space-x-3">
+          {/* Voice button */}
+          <button
+            onClick={handleMicClick}
+            className={`p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 ${
+              isRecording 
+                ? 'bg-gradient-to-br from-red-500 to-red-600 animate-pulse' 
+                : 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Start voice input'}
+          >
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              {isRecording ? (
+                <path d="M6 6h12v12H6z"/>
+              ) : (
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-4.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              )}
+            </svg>
+          </button>
+          
+          {/* Text input */}
+          <form onSubmit={handleTextSubmit} className="flex-1 flex items-center space-x-2">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Type your message... (Shift+Enter for new line)"
+                className="w-full px-4 py-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading || !textInput.trim()}
+              className={`p-3 rounded-2xl transition-all duration-200 ${
+                loading || !textInput.trim()
+                  ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                  : 'bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+              }`}
+              title="Send message"
+            >
+              {loading ? (
+                <svg className="w-5 h-5 animate-spin" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              )}
+            </button>
+          </form>
+        </div>
+        
+        {/* Status */}
+        {(isRecording || loading) && (
+          <div className="flex items-center justify-center mt-3 text-sm text-white/60">
+            {isRecording && (
+              <span className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span>Recording... Speak now</span>
+              </span>
+            )}
+            {loading && !isRecording && (
+              <span>Processing your message...</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <NotificationComponent />
+    </div>
+  );
+
   const renderVoiceAgent = () => (
     <div className={`w-full max-w-4xl ${darkMode ? 'dark' : ''}`}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden transition-all duration-500">
@@ -1215,6 +1424,133 @@ export default function Home() {
     </div>
   );
 
+  const renderDashboard = () => (
+    <div className="w-full max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12,2A2,2 0 0,0 10,4C10,5.38 10.83,6.57 12,7.17C13.17,6.57 14,5.38 14,4A2,2 0 0,0 12,2M21,9V7L15,1H5C3.89,1 3,1.89 3,3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V9M12,15C10.89,15 10,14.1 10,13S10.89,11 12,11A2,2 0 0,1 14,13C14,14.1 13.1,15 12,15Z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
+            <p className="text-white/80 text-sm">Your intelligent chat companion</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            title="Toggle theme"
+          >
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              {darkMode ? (
+                <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+              ) : (
+                <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+              )}
+            </svg>
+          </button>
+          
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg transition-colors"
+            title="Logout"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Welcome Section */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
+          <div className="mb-6">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              AI Agents and the Evolution<br />
+              of Digital Economies
+            </h2>
+            <p className="text-white/80 leading-relaxed">
+              The Next-Gen AI Agent Economy represents a transformative shift where intelligent, autonomous 
+              software agents perform complex tasks, make decisions, and collaborate on behalf of users.
+            </p>
+          </div>
+          
+          <button
+            onClick={() => setCurrentPage('chat')}
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105 font-medium"
+          >
+            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12,2A2,2 0 0,0 10,4C10,5.38 10.83,6.57 12,7.17C13.17,6.57 14,5.38 14,4A2,2 0 0,0 12,2M21,9V7L15,1H5C3.89,1 3,1.89 3,3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V9M12,15C10.89,15 10,14.1 10,13S10.89,11 12,11A2,2 0 0,1 14,13C14,14.1 13.1,15 12,15Z" />
+            </svg>
+            Get started
+          </button>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid gap-4">
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-4.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Voice Chat</h3>
+            </div>
+            <p className="text-white/70 text-sm">Speak naturally with your AI assistant using advanced voice recognition.</p>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Smart Responses</h3>
+            </div>
+            <p className="text-white/70 text-sm">Get intelligent, contextual responses powered by advanced AI technology.</p>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">Secure & Private</h3>
+            </div>
+            <p className="text-white/70 text-sm">Your conversations are encrypted and stored securely with full privacy protection.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="mt-12 grid grid-cols-3 gap-6">
+        <div className="text-center">
+          <div className="text-3xl font-bold text-white mb-2">{messages.length}</div>
+          <div className="text-white/60 text-sm">Messages</div>
+        </div>
+        <div className="text-center">
+          <div className="text-3xl font-bold text-white mb-2">99%</div>
+          <div className="text-white/60 text-sm">Uptime</div>
+        </div>
+        <div className="text-center">
+          <div className="text-3xl font-bold text-white mb-2">24/7</div>
+          <div className="text-white/60 text-sm">Available</div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderConsentScreen = () => (
     <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 md:p-8 transform transition-transform duration-500">
       <div className="text-center mb-6">
@@ -1393,14 +1729,11 @@ export default function Home() {
     } text-gray-100 p-4`}>
       <div className="flex flex-col items-center justify-center min-h-screen">
         {userId ? (
-          <div className="w-full flex flex-col items-center">
-            <div className="text-xs text-white/60 mb-4 text-center">
-              <div className="bg-black/20 rounded-full px-3 py-1 backdrop-blur-sm">
-                Connected as: {userId.slice(0, 8)}...{userId.slice(-4)}
-              </div>
-            </div>
-            {renderVoiceAgent()}
-          </div>
+          currentPage === 'dashboard' ? (
+            renderDashboard()
+          ) : (
+            renderSimpleChat()
+          )
         ) : showConsentScreen ? (
           renderConsentScreen()
         ) : (
