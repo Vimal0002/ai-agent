@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:preview": "npm run build && firebase hosting:channel:deploy preview",
+    "deploy:netlify": "npm run build && netlify deploy --prod --dir=out",
+    "deploy:netlify-preview": "npm run build && netlify deploy --dir=out"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
