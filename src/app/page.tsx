@@ -1533,6 +1533,7 @@ export default function Home() {
         </div>
       </div>
 
+
       {/* Stats Section */}
       <div className="mt-12 grid grid-cols-3 gap-6">
         <div className="text-center">
