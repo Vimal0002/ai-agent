@@ -57,6 +57,8 @@ export default function Home() {
   });
   const [filteredMessages, setFilteredMessages] = useState<typeof messages>([]);
   const [notification, setNotification] = useState<{text: string, type: 'success'|'error'|'info'} | null>(null);
+  const [showConsentScreen, setShowConsentScreen] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -275,20 +277,10 @@ export default function Home() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid);
-      
-      try {
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            email: user.email,
-            createdAt: Date.now(),
-          });
-        }
-      } catch (firestoreError: unknown) {
-        console.warn('Could not create user document, but login successful:', firestoreError);
-        // Don't block login if Firestore fails
-      }
+      // Show consent screen instead of directly logging in
+      setPendingUser(user);
+      setShowConsentScreen(true);
+      showNotification('Please review and accept permissions to continue.', 'info');
     } catch (error: unknown) {
       console.error("Google login error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -400,6 +392,62 @@ export default function Home() {
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
+  };
+
+  const handleAcceptConsent = async () => {
+    if (!pendingUser || !auth || !db) return;
+    
+    setLoading(true);
+    try {
+      const userDocRef = doc(db, 'artifacts', appId, 'users', pendingUser.uid);
+      
+      try {
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            email: pendingUser.email,
+            createdAt: Date.now(),
+            consentAccepted: true,
+            consentDate: Date.now()
+          });
+        } else {
+          await setDoc(userDocRef, {
+            consentAccepted: true,
+            consentDate: Date.now()
+          }, { merge: true });
+        }
+      } catch (firestoreError: unknown) {
+        console.warn('Could not update user document, but login will proceed:', firestoreError);
+      }
+      
+      // Complete the login process
+      setUserId(pendingUser.uid);
+      setShowConsentScreen(false);
+      setPendingUser(null);
+      showNotification('Welcome! You can now start chatting with your AI assistant.', 'success');
+      
+    } catch (error) {
+      console.error('Error completing login:', error);
+      showNotification('Error completing login. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectConsent = async () => {
+    if (!auth || !pendingUser) return;
+    
+    try {
+      // Sign out the user since they rejected consent
+      await signOut(auth);
+      setShowConsentScreen(false);
+      setPendingUser(null);
+      showNotification('Login cancelled. You can try again anytime.', 'info');
+    } catch (error) {
+      console.error('Error during consent rejection:', error);
+      setShowConsentScreen(false);
+      setPendingUser(null);
+    }
   };
 
   const requestMicrophonePermission = async () => {
@@ -1167,20 +1215,93 @@ export default function Home() {
     </div>
   );
 
+  const renderConsentScreen = () => (
+    <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 md:p-8 transform transition-transform duration-500">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Permissions Required
+        </h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Welcome, {pendingUser?.displayName || pendingUser?.email}!
+        </p>
+      </div>
+
+      <div className="space-y-4 mb-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            What we&apos;ll access:
+          </h3>
+          <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Your email address for account identification</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Basic profile information (name, profile picture)</span>
+            </li>
+            <li className="flex items-start">
+              <span className="text-green-500 mr-2">✓</span>
+              <span>Store your chat history securely in our database</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z"/>
+            </svg>
+            Privacy Notice:
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Your data is encrypted and stored securely. We never share your personal information or chat history with third parties. You can delete your account and data at any time.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex space-x-3">
+        <button
+          onClick={handleRejectConsent}
+          disabled={loading}
+          className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+        >
+          Decline
+        </button>
+        <button
+          onClick={handleAcceptConsent}
+          disabled={loading}
+          className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-colors font-medium flex items-center justify-center"
+        >
+          {loading ? (
+            <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : null}
+          Accept & Continue
+        </button>
+      </div>
+
+      <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+        By continuing, you agree to our Terms of Service and Privacy Policy.
+      </p>
+    </div>
+  );
+
   const renderLogin = () => (
     <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 md:p-8 transform transition-transform duration-500 hover:scale-[1.01]">
       <h1 className="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-6">
         Welcome
       </h1>
-      {/* Debug Info */}
-      {typeof window !== 'undefined' && (
-        <div className="mb-4 p-2 bg-red-100 border border-red-300 rounded text-xs text-red-700">
-          <strong>Debug:</strong> {window.location.hostname}<br/>
-          <strong>Auth Domain:</strong> {process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'Missing'}<br/>
-          <strong>API Key:</strong> {process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? 'Set' : 'Missing'}<br/>
-          <strong>Connection:</strong> {connectionStatus}
-        </div>
-      )}
       <div className="space-y-4">
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
           Sign in to access your AI assistant
@@ -1280,6 +1401,8 @@ export default function Home() {
             </div>
             {renderVoiceAgent()}
           </div>
+        ) : showConsentScreen ? (
+          renderConsentScreen()
         ) : (
           renderLogin()
         )}
